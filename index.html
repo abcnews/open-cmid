@@ -1,0 +1,82 @@
+<html>
+  <head>
+    <title>Open CMID</title>
+    <style>
+      * { box-sixing: border-box; }
+      html { font-size: 16px; overflow: hidden; }
+      body { margin: .25rem .5rem; display: flex; text-align: center; }
+      input, button { flex-grow: 1; font-size: 1rem; border: none; padding: .25rem; height: 2rem; }
+      input { flex-grow: 1; border-bottom: .125rem solid rgba(0,0,0,.5); width: 50%; font-family: Monaco, monospace; }
+      button { flex-shrink: 0; opacity: .5; min-width: 1.5rem; background-color: transparent; }
+      button svg { max-height: 100%; width: auto; }
+      input:hover { border-color: rgba(0,0,0,.75);}
+      button:hover { opacity: .75; cursor: pointer; }
+      body > *:focus { outline: none; }
+      input:focus { border-color: black; }
+      button:focus { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <div tabindex="0" onfocus="last.focus()"></div>
+    <input id="cmid" type="text" maxlength="8" autofocus />
+    <button data-path="news/mobile">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 31 50">
+        <path d="M28 .5H3C1.62.5.5 1.62.5 3v44c0 1.38 1.12 2.5 2.5 2.5h25c1.38 0 2.5-1.12 2.5-2.5V3c0-1.38-1.12-2.5-2.5-2.5zm-22.5 5h20v35h-20v-35zm7.292 41v-3h5.417v3H12.79z"/>
+      </svg>
+    </button>
+    <button id="last" data-path="news" data-hash="devmode">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 70">
+        <path d="M29.5 66.5h-5c-.83 0-1.5.672-1.5 1.5s.67 1.5 1.5 1.5h31c.828 0 1.5-.672 1.5-1.5s-.672-1.5-1.5-1.5h-6v-6h-20v6zM77 .5H3C1.62.5.5 1.62.5 3v52c0 1.38 1.12 2.5 2.5 2.5h74c1.38 0 2.5-1.12 2.5-2.5V3c0-1.38-1.12-2.5-2.5-2.5zm-34.5 50v2h-5v-3h5v1zm32-5h-69v-40h69v40z"/>
+      </svg>
+    </button>
+    <div tabindex="0" onfocus="cmid.focus()"></div>
+    <script>
+      const { ipcRenderer } = require('electron');
+      const controls = Array.from(document.querySelectorAll('input, button'));
+
+      const PREVIEW_ROOT = 'http://nucwed.aus.aunty.abc.net.au/';
+      const LIVE_NEWS_ROOT = 'http://www.abc.net.au/news/';
+
+      function resolve() {
+        const id = +cmid.value;
+        const path = this.dataset.path;
+        const hash = this.dataset.hash;
+
+        if (typeof id !== 'number') {
+          return;
+        }
+
+        function open() {
+          ipcRenderer.send('open', url);
+          controls.forEach(el => el.removeAttribute('disabled'));
+          cmid.focus();
+        }
+
+        const previewNewsRoot = `${PREVIEW_ROOT}${path}/`;
+        let url = `${previewNewsRoot}${id}`;
+
+        controls.forEach(el => el.setAttribute('disabled' , ''));
+
+        fetch(`https://content-gateway.abc-prod.net.au/api/v2/content/id/${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.canonicalUrl) {
+            url = `${data.canonicalUrl.replace(LIVE_NEWS_ROOT, previewNewsRoot)}${hash ? `#${hash}` : ''}`;
+          }
+
+          open();
+        })
+        .catch(open);
+      }
+
+      Array.from(document.querySelectorAll('button')).forEach(el =>
+        el.addEventListener('click', resolve));
+
+      document.body.oncontextmenu = () => ipcRenderer.send('quit');
+
+      // setInterval(() => {
+      //   cmid.setAttribute('placeholder', Math.floor(7e6 + Math.random() * 2e6));
+      // }, 250);
+    </script>
+  </body>
+</html>
